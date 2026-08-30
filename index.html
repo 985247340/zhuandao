@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes, viewport-fit=cover">
+    <title>转刀大师</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #231F20;
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #1a1a2e;
+        }
+
+        #game-canvas {
+            display: block;
+            background: #16213e;
+            image-rendering: pixelated;
+        }
+
+        /* 加载界面 */
+        #loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1a1a2e;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            color: #e0e0e0;
+        }
+
+        #loading-screen h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #e94560;
+            text-shadow: 0 0 20px rgba(233, 69, 96, 0.5);
+        }
+
+        .loading-bar-wrapper {
+            width: 300px;
+            height: 20px;
+            background: #0f3460;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #e94560;
+        }
+
+        #loading-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #e94560, #f5a623);
+            transition: width 0.3s;
+        }
+
+        /* 开始界面 */
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(26, 26, 46, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 90;
+            color: #e0e0e0;
+        }
+
+        #start-screen h1 {
+            font-size: 3em;
+            color: #e94560;
+            text-shadow: 0 0 30px rgba(233, 69, 96, 0.6);
+            margin-bottom: 10px;
+        }
+
+        #start-screen h2 {
+            font-size: 1.5em;
+            color: #f5a623;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 15px 50px;
+            font-size: 1.3em;
+            color: #fff;
+            background: linear-gradient(135deg, #e94560, #0f3460);
+            border: 2px solid #e94560;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin: 10px;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(233, 69, 96, 0.5);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        #instructions {
+            max-width: 500px;
+            text-align: center;
+            color: #aaa;
+            font-size: 0.9em;
+            line-height: 1.8;
+            margin-top: 20px;
+            padding: 0 20px;
+        }
+
+        /* HUD */
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .hud-left, .hud-right {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .hud-right {
+            align-items: flex-end;
+        }
+
+        .hp-bar-wrapper {
+            width: 200px;
+            height: 18px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #e94560;
+            border-radius: 9px;
+            overflow: hidden;
+        }
+
+        #hp-bar {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #e94560, #ff6b6b);
+            transition: width 0.3s;
+        }
+
+        .exp-bar-wrapper {
+            width: 200px;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #f5a623;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        #exp-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #f5a623, #ffd700);
+            transition: width 0.2s;
+        }
+
+        .energy-bar-wrapper {
+            width: 200px;
+            height: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #00ffff;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        #energy-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #0066ff, #00ffff);
+            transition: width 0.2s;
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+        }
+
+        .hud-text {
+            color: #e0e0e0;
+            font-size: 14px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+        }
+
+        /* 升级选择界面 */
+        #upgrade-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 80;
+            color: #e0e0e0;
+        }
+
+        #upgrade-screen h2 {
+            font-size: 2em;
+            color: #f5a623;
+            margin-bottom: 30px;
+            text-shadow: 0 0 20px rgba(245, 166, 35, 0.5);
+        }
+
+        .upgrade-options {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 900px;
+        }
+
+        .upgrade-card {
+            width: 220px;
+            padding: 25px 15px;
+            background: linear-gradient(135deg, #0f3460, #16213e);
+            border: 2px solid #e94560;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .upgrade-card:hover {
+            transform: translateY(-5px);
+            border-color: #f5a623;
+            box-shadow: 0 5px 30px rgba(245, 166, 35, 0.3);
+        }
+
+        .upgrade-icon {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .upgrade-name {
+            font-size: 1.1em;
+            color: #f5a623;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .upgrade-desc {
+            font-size: 0.85em;
+            color: #aaa;
+            line-height: 1.5;
+        }
+
+        .upgrade-level {
+            font-size: 0.8em;
+            color: #e94560;
+            margin-top: 8px;
+        }
+
+        /* 游戏结束界面 */
+        #gameover-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 80;
+            color: #e0e0e0;
+        }
+
+        #gameover-screen h2 {
+            font-size: 3em;
+            color: #e94560;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px rgba(233, 69, 96, 0.6);
+        }
+
+        .gameover-stats {
+            font-size: 1.2em;
+            color: #f5a623;
+            margin-bottom: 30px;
+            text-align: center;
+            line-height: 2;
+        }
+
+        /* 摇杆 */
+        #joystick {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            z-index: 60;
+            display: none;
+            touch-action: none;
+            pointer-events: none;
+        }
+
+        #joystick-knob {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(233, 69, 96, 0.6);
+            border: 2px solid #e94560;
+        }
+
+        /* 手机端大招按钮 */
+        #ult-btn {
+            position: absolute;
+            bottom: 40px;
+            right: 40px;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.4);
+            border: 3px solid rgba(0, 255, 255, 0.3);
+            color: #00ffff;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 60;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            line-height: 1.2;
+            touch-action: none;
+            transition: all 0.2s;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #ult-btn.ready {
+            border-color: #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+            background: rgba(0, 100, 200, 0.4);
+            animation: ultPulse 1s ease-in-out infinite;
+        }
+
+        @keyframes ultPulse {
+            0%, 100% { box-shadow: 0 0 15px rgba(0, 255, 255, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(0, 255, 255, 0.8); }
+        }
+
+        #ult-btn:active {
+            transform: scale(0.92);
+        }
+
+        /* 静音按钮 */
+        #mute-btn {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #e0e0e0;
+            font-size: 18px;
+            cursor: pointer;
+            z-index: 55;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        #mute-btn:hover {
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        /* 装备栏 */
+        #equipment-bar {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            display: flex;
+            gap: 8px;
+            z-index: 55;
+        }
+
+        .equip-slot {
+            width: 46px;
+            height: 46px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .equip-slot.filled {
+            border-color: #FFD700;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .equip-slot.filled:hover {
+            box-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
+            transform: scale(1.08);
+        }
+
+        .equip-tooltip {
+            display: none;
+            position: absolute;
+            bottom: 52px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #FFD700;
+            border-radius: 6px;
+            padding: 8px 12px;
+            min-width: 140px;
+            max-width: 220px;
+            color: #e0e0e0;
+            font-size: 0.85em;
+            line-height: 1.4;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 60;
+        }
+
+        .equip-slot:hover .equip-tooltip {
+            display: block;
+        }
+
+        .equip-tooltip .equip-name {
+            color: #FFD700;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 2px;
+        }
+
+        .equip-tooltip .equip-desc {
+            color: #aaa;
+            white-space: normal;
+        }
+
+        @media (max-width: 768px) {
+            #start-screen h1 {
+                font-size: 2em;
+            }
+            #start-screen h2 {
+                font-size: 1.2em;
+            }
+            #instructions {
+                font-size: 0.8em;
+            }
+            .upgrade-card {
+                width: 160px;
+                padding: 15px 10px;
+            }
+            #gameover-screen h2 {
+                font-size: 2em;
+            }
+            #equipment-bar {
+                bottom: 10px;
+                left: 10px;
+            }
+            .equip-slot {
+                width: 38px;
+                height: 38px;
+                font-size: 18px;
+            }
+            .equip-tooltip {
+                font-size: 0.75em;
+            }
+        }
+
+        /* 竖屏时游戏容器自动旋转 */
+        #game-container.rotate-portrait {
+            position: fixed;
+            top: 0;
+            left: 100%;
+            width: 100vh;
+            height: 100vw;
+            transform-origin: left top;
+            transform: rotate(90deg);
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- 加载界面 -->
+        <div id="loading-screen">
+            <h1>转刀大师</h1>
+            <div class="loading-bar-wrapper">
+                <div id="loading-bar"></div>
+            </div>
+            <p style="margin-top: 15px; color: #aaa;">加载中...</p>
+        </div>
+
+        <!-- 开始界面 -->
+        <div id="start-screen" style="display:none;">
+            <h1>转刀大师</h1>
+            <h2>PingDao</h2>
+            <button class="btn" id="start-btn">开始游戏</button>
+            <div id="instructions">
+                🎮 操作说明：<br>
+                <strong>电脑端：</strong>WASD或方向键移动 | 空格/J/E键释放大招<br>
+                <strong>手机端：</strong>屏幕任意位置触摸拖动移动 | 右下角大招按钮释放大招<br><br>
+                玩家身边有旋转飞刀，移动靠近敌人让飞刀击杀它们。<br>
+                击杀敌人掉落经验球，收集升级后选择技能强化！<br>
+                ⚡ 杀怪获得能量，能量满了释放大招六脉神剑！<br>
+                🗝️ 地图上随机出现宝箱，用飞刀打破可获得随机飞刀！<br>
+                ⚠ 每隔3分钟随机出现Boss，Boss也有飞刀，碰撞会相互抵消！<br>
+                👑 击败Boss可获得强力装备，装备效果可叠加！<br>
+                活到最后，成为最强转刀大师！
+            </div>
+        </div>
+
+        <!-- HUD -->
+        <div id="hud" style="display:none;">
+            <div class="hud-left">
+                <div class="hp-bar-wrapper">
+                    <div id="hp-bar"></div>
+                </div>
+                <div class="hud-text">❤️ HP: <span id="hp-text">100/100</span></div>
+                <div class="exp-bar-wrapper">
+                    <div id="exp-bar"></div>
+                </div>
+                <div class="hud-text">⭐ Lv.<span id="level-text">1</span> | EXP: <span id="exp-text">0/10</span></div>
+                <div class="energy-bar-wrapper">
+                    <div id="energy-bar"></div>
+                </div>
+                <div class="hud-text">⚡ 能量: <span id="energy-text">0/200</span></div>
+            </div>
+            <div class="hud-right">
+                <div class="hud-text">🗡️ 刀数: <span id="knife-text">3</span></div>
+                <div class="hud-text">🗝️ 宝箱: <span id="chest-text">0</span></div>
+                <div class="hud-text">💀 击杀: <span id="kill-text">0</span></div>
+                <div class="hud-text">⏱️ <span id="time-text">00:00</span></div>
+            </div>
+        </div>
+
+        <!-- 装备栏 -->
+        <div id="equipment-bar" style="display:none;">
+            <div class="equip-slot" id="equip-slot-0">
+                <span class="equip-icon"></span>
+                <div class="equip-tooltip"></div>
+            </div>
+            <div class="equip-slot" id="equip-slot-1">
+                <span class="equip-icon"></span>
+                <div class="equip-tooltip"></div>
+            </div>
+            <div class="equip-slot" id="equip-slot-2">
+                <span class="equip-icon"></span>
+                <div class="equip-tooltip"></div>
+            </div>
+        </div>
+        <div id="mute-btn">🔊</div>
+
+        <!-- 摇杆 -->
+        <div id="joystick">
+            <div id="joystick-knob"></div>
+        </div>
+
+        <!-- 手机端大招按钮 -->
+        <div id="ult-btn">⚡<br>大招</div>
+
+        <!-- 升级界面 -->
+        <div id="upgrade-screen">
+            <h2>⭐ 升级！选择一项技能</h2>
+            <div class="upgrade-options" id="upgrade-options"></div>
+        </div>
+
+        <!-- 游戏结束 -->
+        <div id="gameover-screen">
+            <h2>💀 游戏结束</h2>
+            <div class="gameover-stats" id="gameover-stats"></div>
+            <button class="btn" id="restart-btn">重新开始</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
